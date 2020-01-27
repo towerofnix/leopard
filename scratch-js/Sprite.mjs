@@ -60,6 +60,7 @@ class SpriteBase {
     this.triggers = [];
     this.costumes = [];
     this.sounds = [];
+    this.name = this.constructor.name;
 
     this.effects = new _EffectMap();
 
@@ -238,6 +239,39 @@ class SpriteBase {
     for (const sound of this.sounds) {
       sound.stop();
     }
+  }
+
+  getPositionOf(target) {
+    if (typeof target === 'object') {
+      return {x: target.x, y: target.y};
+    } else if (target === '_mouse_') {
+      return {x: this.mouse.x, y: this.mouse.y};
+    } else if (target === '_stage_') {
+      return {x: 0, y: 0};
+    } else if (target === '_random_') {
+      return {
+        x: 2 * (Math.random() - 0.5) * this.stage.width,
+        y: 2 * (Math.random() - 0.5) * this.stage.height
+      };
+    } else if (target in this.sprites) {
+      return {x: this.sprites[target].x, y: this.sprites[target].y};
+    } else {
+      return {x: 0, y: 0, notFound: true};
+    }
+  }
+
+  createCloneOf(target) {
+    let object;
+    if (typeof target === 'object') {
+      object = target;
+    } else if (target === '_myself_') {
+      object = this;
+    } else if (target in this.sprites) {
+      object = this.sprites[target];
+    } else {
+      return;
+    }
+    object.createClone();
   }
 
   broadcast(name) {
@@ -427,6 +461,29 @@ export class Sprite extends SpriteBase {
       this.goto(interpolate(startX, x, t), interpolate(startY, y, t));
       yield;
     } while (t < 1);
+  }
+
+  *glideTo(seconds, target) {
+    const { x, y, notFound } = this.getPositionOf(target);
+    if (!notFound) {
+      yield* this.glide(seconds, x, y);
+    }
+  }
+
+  pointTowards(target) {
+    const { x, y, notFound } = this.getPositionOf(target);
+    if (!notFound) {
+      this.direction = this.radToScratch(Math.atan2(y - this.y, x - this.x))
+    }
+  }
+
+  distanceTo(target) {
+    const { x, y, notFound } = this.getPositionOf(target);
+    if (notFound) {
+      return 10000;
+    } else {
+      return Math.hypot(x - this.x, y - this.y);
+    }
   }
 
   get penDown() {
